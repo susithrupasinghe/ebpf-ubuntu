@@ -2,9 +2,12 @@
     FROM ubuntu:24.04 AS bcc_builder
     ENV DEBIAN_FRONTEND=noninteractive
     
+    # Enable BuildKit features
+    # syntax=docker/dockerfile:1.4
+    
     # Build deps for BCC
     RUN apt-get update && apt-get install -y --no-install-recommends \
-        git cmake build-essential \
+        git cmake build-essential ccache \
         clang llvm llvm-dev libclang-dev \
         bison flex libelf-dev zlib1g-dev libedit-dev libcap-dev libdw-dev \
         libbpf-dev libzstd-dev python3 python3-pip python3-dev ca-certificates \
@@ -24,10 +27,12 @@
           -DENABLE_EXAMPLES=OFF \
           -DPYTHON_CMD=python3 \
           -DCMAKE_C_FLAGS="-Wno-error" \
-          -DCMAKE_CXX_FLAGS="-Wno-error"
+          -DCMAKE_CXX_FLAGS="-Wno-error" \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
     
-    # Build (single-thread to dodge rare race) and install
-    RUN cmake --build /build/bcc -- -j1
+    # Build with parallel compilation and install
+    RUN cmake --build /build/bcc -- -j$(nproc)
     RUN cmake --install /build/bcc
     
     # Sanity: Python can import bcc (installed as a dist-egg by CMake)
@@ -53,7 +58,7 @@
     FROM ubuntu:24.04 AS bpftool_builder
     ENV DEBIAN_FRONTEND=noninteractive
     RUN apt-get update && apt-get install -y --no-install-recommends \
-        git make build-essential clang llvm pkg-config \
+        git make build-essential ccache clang llvm pkg-config \
         libelf-dev zlib1g-dev libbpf-dev ca-certificates \
      && rm -rf /var/lib/apt/lists/*
     
@@ -61,6 +66,9 @@
      || (git clone --depth=1 https://github.com/libbpf/bpftool /src/bpftool && \
          cd /src/bpftool && git submodule update --init --depth=1)
     
+    # Configure ccache for bpftool build
+    ENV CC="ccache gcc"
+    ENV CXX="ccache g++"
     RUN make -C /src/bpftool/src -j"$(nproc)"
     
     # ---------- Stage 3: runtime image ----------
