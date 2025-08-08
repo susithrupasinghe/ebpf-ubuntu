@@ -300,15 +300,18 @@ ls /sys/fs/bpf/
 
 ### GitHub Actions
 
-This repository includes GitHub Actions workflows for automated Docker image building:
+This repository includes a GitHub Actions workflow for automated Docker image building:
 
 - **`docker-build.yml`**: Advanced workflow with multiple tag strategies
-- **`docker-build-simple.yml`**: Simple workflow that tags images with branch names
 
-The workflows automatically:
+The workflow automatically:
 - Build multi-platform images (amd64, arm64)
 - Push to GitHub Container Registry (GHCR)
-- Tag images with branch names (e.g., `main`, `develop`, `feature-xyz`)
+- Tag images with multiple strategies:
+  - Branch name (e.g., `main`, `develop`, `feature-xyz`)
+  - Branch name + short SHA (e.g., `main-a1b2c3d`)
+  - Branch name + full SHA (e.g., `main-a1b2c3d4e5f6...`)
+  - Semantic versioning for tags (e.g., `v1.0.0`)
 - Cache layers for faster builds
 
 ### Contributing
@@ -321,6 +324,12 @@ The workflows automatically:
 
 The workflow will automatically build and test your changes.
 
+## Author
+
+**Susith Rupasinghe** ([@susithrupasinghe](https://github.com/susithrupasinghe))
+
 ## License
 
 This project is provided as-is for educational and development purposes.
+
+Copyright © 2024 Susith Rupasinghe. All rights reserved.
