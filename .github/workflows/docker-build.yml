@@ -37,7 +37,7 @@ jobs:
       id: tags
       run: |
         if [ "${{ github.event_name }}" = "pull_request" ]; then
-          echo "tags=pr-${{ github.event.number }},pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
         else
           # Branch name (replace slashes with dashes)
           BRANCH_TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
@@ -46,23 +46,11 @@ jobs:
           # Full SHA
           FULL_SHA="${{ github.sha }}"
           
-          echo "tags=$BRANCH_TAG,$BRANCH_TAG-$SHORT_SHA,$BRANCH_TAG-$FULL_SHA" >> $GITHUB_OUTPUT
+          echo "tags=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_TAG,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_TAG-$SHORT_SHA,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$BRANCH_TAG-$FULL_SHA" >> $GITHUB_OUTPUT
           echo "branch_tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
           echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "full_sha=$FULL_SHA" >> $GITHUB_OUTPUT
         fi
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -70,8 +58,7 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.tags.outputs.tags }},${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.tags.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         build-args: |
@@ -81,8 +68,7 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
         echo "Built and pushed image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-        echo "Custom tags: ${{ steps.tags.outputs.tags }}"
-        echo "Metadata tags: ${{ steps.meta.outputs.tags }}"
+        echo "Tags: ${{ steps.tags.outputs.tags }}"
         echo "Branch: ${{ steps.tags.outputs.branch_tag }}"
         echo "Short SHA: ${{ steps.tags.outputs.short_sha }}"
         echo "Full SHA: ${{ steps.tags.outputs.full_sha }}" 
