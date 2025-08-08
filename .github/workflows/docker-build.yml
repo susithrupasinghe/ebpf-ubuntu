@@ -33,6 +33,25 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Determine tags
+      id: tags
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          echo "tags=pr-${{ github.event.number }},pr-${{ github.event.number }}-${{ github.sha }}" >> $GITHUB_OUTPUT
+        else
+          # Branch name (replace slashes with dashes)
+          BRANCH_TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
+          # Short SHA
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          # Full SHA
+          FULL_SHA="${{ github.sha }}"
+          
+          echo "tags=$BRANCH_TAG,$BRANCH_TAG-$SHORT_SHA,$BRANCH_TAG-$FULL_SHA" >> $GITHUB_OUTPUT
+          echo "branch_tag=$BRANCH_TAG" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "full_sha=$FULL_SHA" >> $GITHUB_OUTPUT
+        fi
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -51,13 +70,19 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: ${{ steps.tags.outputs.tags }},${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: Output image info
       if: github.event_name != 'pull_request'
       run: |
         echo "Built and pushed image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-        echo "Tags: ${{ steps.meta.outputs.tags }}" 
+        echo "Custom tags: ${{ steps.tags.outputs.tags }}"
+        echo "Metadata tags: ${{ steps.meta.outputs.tags }}"
+        echo "Branch: ${{ steps.tags.outputs.branch_tag }}"
+        echo "Short SHA: ${{ steps.tags.outputs.short_sha }}"
+        echo "Full SHA: ${{ steps.tags.outputs.full_sha }}" 
