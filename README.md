@@ -40,10 +40,16 @@ docker pull ghcr.io/YOUR_USERNAME/ebpf:develop
 ```
 
 The build process includes:
-1. Building BCC from source (v0.31.0)
-2. Building bpftool from source
+1. Building BCC from source (v0.31.0) with parallel compilation and ccache
+2. Building bpftool from source with ccache optimization
 3. Installing runtime dependencies
 4. Setting up example scripts
+
+**Build Optimizations:**
+- Parallel compilation using all available CPU cores
+- ccache for faster incremental builds
+- GitHub Actions layer caching
+- Multi-stage builds to reduce final image size
 
 ## Running the Container
 
